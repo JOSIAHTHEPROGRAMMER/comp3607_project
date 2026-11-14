@@ -2,36 +2,23 @@ package comp3607_project;
 
 import bluej.extensions2.BlueJ;
 import bluej.extensions2.Extension;
-import bluej.extensions2.ExtensionException;
-import bluej.extensions2.event.PackageEvent;
-import bluej.extensions2.event.PackageListener;
+import comp3607_project.adapter.BlueJLifecycleAdapter;
+import comp3607_project.lifecycle.LifecycleTracker;
+import comp3607_project.model.ConsoleSink;
+import comp3607_project.model.EventSink;
 import java.net.URI;
 import java.net.URL;
 
-public class HelloExtension extends Extension implements PackageListener {
+public class HelloExtension extends Extension {
 
     @Override
     public void startup(BlueJ bluej) {
-        bluej.addPackageListener(this);
+        EventSink sink = new ConsoleSink();
+        LifecycleTracker tracker = new LifecycleTracker(sink, System::currentTimeMillis);
+        BlueJLifecycleAdapter adapter = new BlueJLifecycleAdapter(tracker);
+        bluej.addPackageListener(adapter);
+        bluej.addClassListener(adapter);
         System.out.println("[Telemetry] extension started");
-    }
-
-    @Override
-    public void packageOpened(PackageEvent ev) {
-        try {
-            System.out.println("[Telemetry] project opened: " + ev.getPackage().getProject().getName());
-        } catch (ExtensionException e) {
-            System.out.println("[Telemetry] project opened (name unavailable)");
-        }
-    }
-
-    @Override
-    public void packageClosing(PackageEvent ev) {
-        try {
-            System.out.println("[Telemetry] project closing: " + ev.getPackage().getProject().getName());
-        } catch (ExtensionException e) {
-            System.out.println("[Telemetry] project closing (name unavailable)");
-        }
     }
 
     @Override
@@ -41,7 +28,7 @@ public class HelloExtension extends Extension implements PackageListener {
 
     @Override
     public String getVersion() {
-        return "0.1";
+        return "0.2";
     }
 
     @Override
@@ -51,7 +38,7 @@ public class HelloExtension extends Extension implements PackageListener {
 
     @Override
     public String getDescription() {
-        return "Logs project open and close events";
+        return "Logs project and class lifecycle events";
     }
 
     @Override
