@@ -2,7 +2,9 @@ package comp3607_project;
 
 import bluej.extensions2.BlueJ;
 import bluej.extensions2.Extension;
+import comp3607_project.adapter.BlueJExecutionAdapter;
 import comp3607_project.adapter.BlueJLifecycleAdapter;
+import comp3607_project.execution.ExecutionTracker;
 import comp3607_project.lifecycle.LifecycleTracker;
 import comp3607_project.model.ConsoleSink;
 import comp3607_project.model.EventSink;
@@ -14,10 +16,15 @@ public class HelloExtension extends Extension {
     @Override
     public void startup(BlueJ bluej) {
         EventSink sink = new ConsoleSink();
-        LifecycleTracker tracker = new LifecycleTracker(sink, System::currentTimeMillis);
-        BlueJLifecycleAdapter adapter = new BlueJLifecycleAdapter(tracker);
-        bluej.addPackageListener(adapter);
-        bluej.addClassListener(adapter);
+
+        LifecycleTracker lifecycleTracker = new LifecycleTracker(sink, System::currentTimeMillis);
+        BlueJLifecycleAdapter lifecycleAdapter = new BlueJLifecycleAdapter(lifecycleTracker);
+        bluej.addPackageListener(lifecycleAdapter);
+        bluej.addClassListener(lifecycleAdapter);
+
+        ExecutionTracker executionTracker = new ExecutionTracker(sink, System::currentTimeMillis);
+        bluej.addInvocationFinishedListener(new BlueJExecutionAdapter(executionTracker));
+
         System.out.println("[Telemetry] extension started");
     }
 
@@ -28,7 +35,7 @@ public class HelloExtension extends Extension {
 
     @Override
     public String getVersion() {
-        return "0.2";
+        return "0.3";
     }
 
     @Override
@@ -38,7 +45,7 @@ public class HelloExtension extends Extension {
 
     @Override
     public String getDescription() {
-        return "Logs project and class lifecycle events";
+        return "Logs project, class lifecycle and execution events";
     }
 
     @Override
