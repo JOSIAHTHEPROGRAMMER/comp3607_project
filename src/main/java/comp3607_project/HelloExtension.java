@@ -1,15 +1,19 @@
 package comp3607_project;
 
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URL;
+
 import bluej.extensions2.BlueJ;
 import bluej.extensions2.Extension;
+import comp3607_project.adapter.BlueJCompileAdapter;
 import comp3607_project.adapter.BlueJExecutionAdapter;
 import comp3607_project.adapter.BlueJLifecycleAdapter;
+import comp3607_project.compile.CompileTracker;
 import comp3607_project.execution.ExecutionTracker;
 import comp3607_project.lifecycle.LifecycleTracker;
 import comp3607_project.model.ConsoleSink;
 import comp3607_project.model.EventSink;
-import java.net.URI;
-import java.net.URL;
 
 public class HelloExtension extends Extension {
 
@@ -24,7 +28,8 @@ public class HelloExtension extends Extension {
 
         ExecutionTracker executionTracker = new ExecutionTracker(sink, System::currentTimeMillis);
         bluej.addInvocationFinishedListener(new BlueJExecutionAdapter(executionTracker));
-
+        CompileTracker compileTracker = new CompileTracker(sink, System::currentTimeMillis);
+        bluej.addCompileListener(new BlueJCompileAdapter(compileTracker));
         System.out.println("[Telemetry] extension started");
     }
 
@@ -52,7 +57,7 @@ public class HelloExtension extends Extension {
     public URL getURL() {
         try {
             return URI.create("https://github.com/Reon-new/comp3607_project").toURL();
-        } catch (Exception e) {
+        } catch (MalformedURLException e) {
             return null;
         }
     }

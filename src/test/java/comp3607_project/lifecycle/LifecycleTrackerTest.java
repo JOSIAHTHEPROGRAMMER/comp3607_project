@@ -1,13 +1,14 @@
 package comp3607_project.lifecycle;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import comp3607_project.model.EventSink;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import comp3607_project.model.EventSink;
 
 class LifecycleTrackerTest {
 
@@ -18,6 +19,7 @@ class LifecycleTrackerTest {
     private LifecycleTracker tracker;
 
     @BeforeEach
+    @SuppressWarnings("unused")
     void setUp() {
         events = new ArrayList<>();
         now = new AtomicLong(1000);
