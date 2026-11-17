@@ -9,23 +9,32 @@ import bluej.extensions2.event.PackageListener;
 import comp3607_project.json.ProjectDirectoryTracker;
 
 /**
- * Remembers each opened project's folder and reports the folder when a project
- * closes.
+ * Remembers each opened project's folder and reports open and close to
+ * callbacks.
  */
 public class BlueJProjectDirAdapter implements PackageListener {
     private final ProjectDirectoryTracker tracker;
+    private final Consumer<Path> onProjectOpened;
     private final Consumer<Path> onProjectClosing;
 
-    public BlueJProjectDirAdapter(ProjectDirectoryTracker tracker, Consumer<Path> onProjectClosing) {
+    public BlueJProjectDirAdapter(ProjectDirectoryTracker tracker, Consumer<Path> onProjectOpened,
+            Consumer<Path> onProjectClosing) {
         this.tracker = tracker;
+        this.onProjectOpened = onProjectOpened;
         this.onProjectClosing = onProjectClosing;
     }
 
     @Override
     public void packageOpened(PackageEvent ev) {
         Path dir = dirOf(ev);
-        if (dir != null) {
+        if (dir == null) {
+            return;
+        }
+        try {
             tracker.projectOpened(dir);
+            onProjectOpened.accept(dir);
+        } catch (RuntimeException e) {
+            System.out.println("[Telemetry] project open handling failed: " + e);
         }
     }
 
@@ -34,7 +43,7 @@ public class BlueJProjectDirAdapter implements PackageListener {
         try {
             onProjectClosing.accept(dirOf(ev));
         } catch (RuntimeException e) {
-            System.out.println("[Telemetry] export on close failed: " + e);
+            System.out.println("[Telemetry] project close handling failed: " + e);
         }
     }
 

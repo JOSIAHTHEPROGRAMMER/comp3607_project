@@ -8,6 +8,6 @@ public final class EventMappers {
 
     public static List<EventMapper> defaults() {
         return List.of(new CompileEventMapper(), new ExecutionEventMapper(),
-                new LifecycleEventMapper());
+                new LifecycleEventMapper(), new InteractionEventMapper());
     }
 }

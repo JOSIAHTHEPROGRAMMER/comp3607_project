@@ -13,6 +13,7 @@ import comp3607_project.adapter.BlueJExecutionAdapter;
 import comp3607_project.adapter.BlueJLifecycleAdapter;
 import comp3607_project.adapter.BlueJProjectDirAdapter;
 import comp3607_project.compile.CompileTracker;
+import comp3607_project.editor_interactions.EditorTelemetry;
 import comp3607_project.execution.ExecutionTracker;
 import comp3607_project.json.EventCollector;
 import comp3607_project.json.ProjectDirectoryTracker;
@@ -26,6 +27,7 @@ import comp3607_project.model.EventSink;
 public class HelloExtension extends Extension {
     private final ProjectDirectoryTracker dirTracker = new ProjectDirectoryTracker();
     private SessionExporter exporter;
+    private EditorTelemetry editor;
 
     @Override
     public void startup(BlueJ bluej) {
@@ -45,7 +47,17 @@ public class HelloExtension extends Extension {
         CompileTracker compileTracker = new CompileTracker(sink, System::currentTimeMillis);
         bluej.addCompileListener(new BlueJCompileAdapter(compileTracker));
 
-        bluej.addPackageListener(new BlueJProjectDirAdapter(dirTracker, this::exportSession));
+        editor = new EditorTelemetry(sink, () -> dirTracker.getLastKnownDir()
+                .map(p -> p.getFileName() == null ? null : p.getFileName().toString())
+                .orElse(null));
+        editor.start();
+
+        bluej.addPackageListener(new BlueJProjectDirAdapter(dirTracker,
+                editor::projectOpened,
+                dir -> {
+                    exportSession(dir);
+                    editor.projectClosed(dir);
+                }));
         System.out.println("[Telemetry] extension started");
     }
 
@@ -80,6 +92,9 @@ public class HelloExtension extends Extension {
 
     @Override
     public void terminate() {
+        if (editor != null) {
+            editor.close();
+        }
         exportSession(null);
         System.out.println("[Telemetry] extension terminated");
     }
