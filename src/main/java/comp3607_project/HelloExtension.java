@@ -1,9 +1,11 @@
 package comp3607_project;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 import bluej.extensions2.BlueJ;
@@ -23,14 +25,21 @@ import comp3607_project.lifecycle.LifecycleTracker;
 import comp3607_project.model.CompositeSink;
 import comp3607_project.model.ConsoleSink;
 import comp3607_project.model.EventSink;
+import comp3607_project.pdf_exporter.TelemetryReportFacade;
 
 public class HelloExtension extends Extension {
     private final ProjectDirectoryTracker dirTracker = new ProjectDirectoryTracker();
     private SessionExporter exporter;
     private EditorTelemetry editor;
 
+    private TelemetryReportFacade reportFacade;
+    private long sessionStartedAtMillis;
+
     @Override
     public void startup(BlueJ bluej) {
+        sessionStartedAtMillis = System.currentTimeMillis();
+        reportFacade = new TelemetryReportFacade(sessionStartedAtMillis, new ConsoleSink());
+        EventSink sink = reportFacade.sinkForTrackers();
         EventCollector collector = new EventCollector();
         EventSink sink = new CompositeSink(new ConsoleSink(), collector);
         long sessionStart = System.currentTimeMillis();
@@ -78,7 +87,7 @@ public class HelloExtension extends Extension {
 
     @Override
     public String getDescription() {
-        return "Logs project, class lifecycle and execution events";
+        return "Records compile, execution and lifecycle telemetry and exports a PDF report when the extension terminates.";
     }
 
     @Override
@@ -92,6 +101,20 @@ public class HelloExtension extends Extension {
 
     @Override
     public void terminate() {
+        if (reportFacade == null) {
+            return;
+        }
+
+        reportFacade.endSession(System.currentTimeMillis());
+        Path reportsDirectory = Path.of(System.getProperty("user.home"), "BlueJ", "telemetry-reports");
+        File report = reportsDirectory.resolve("session-" + sessionStartedAtMillis + ".pdf").toFile();
+        try {
+            Files.createDirectories(reportsDirectory);
+            reportFacade.export(report);
+            System.out.println("[Telemetry] session report written to " + report.getAbsolutePath());
+        } catch (IOException e) {
+            System.err.println("[Telemetry] could not export session report: " + e.getMessage());
+        }
         if (editor != null) {
             editor.close();
         }
