@@ -37,14 +37,13 @@ public class HelloExtension extends Extension {
 
     @Override
     public void startup(BlueJ bluej) {
+
         sessionStartedAtMillis = System.currentTimeMillis();
         reportFacade = new TelemetryReportFacade(sessionStartedAtMillis, new ConsoleSink());
-        EventSink sink = reportFacade.sinkForTrackers();
         EventCollector collector = new EventCollector();
-        EventSink sink = new CompositeSink(new ConsoleSink(), collector);
-        long sessionStart = System.currentTimeMillis();
+        EventSink sink = new CompositeSink(reportFacade.sinkForTrackers(), collector);
         exporter = new SessionExporter(collector, new TelemetryJsonSerialiser(),
-                "STUDENT_ID_PLACEHOLDER", sessionStart, System::currentTimeMillis);
+                "STUDENT_ID_PLACEHOLDER", sessionStartedAtMillis, System::currentTimeMillis);
 
         LifecycleTracker lifecycleTracker = new LifecycleTracker(sink, System::currentTimeMillis);
         BlueJLifecycleAdapter lifecycleAdapter = new BlueJLifecycleAdapter(lifecycleTracker);
