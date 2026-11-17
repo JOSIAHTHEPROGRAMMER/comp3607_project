@@ -78,6 +78,18 @@ public final class CompileEvent implements TelemetryEvent {
         return file != null ? file : project;
     }
 
+    public static CompileEvent success(long attemptId, long timestamp, String project,
+            String file) {
+        return new CompileEvent(attemptId, timestamp, project, true, null, null, null, file, -1);
+    }
+
+    public static CompileEvent error(long attemptId, long timestamp, String project, String file,
+            int line, String code,
+            CompileErrorClassifier.Category category, String message) {
+        return new CompileEvent(attemptId, timestamp, project, false, code, category, message,
+                file, line);
+    }
+
     @Override
     public String toString() {
         return getEventType() + " attempt=" + attemptId

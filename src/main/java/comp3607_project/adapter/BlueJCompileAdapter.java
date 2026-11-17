@@ -16,23 +16,13 @@ public class BlueJCompileAdapter implements CompileListener {
 
     @Override
     public void compileStarted(CompileEvent ce) {
-        if (!ce.isUserGeneratedCompilation()) {
-            return;
-        }
-        tracker.compileStarted();
+        forward(ce, "compile start", tracker::compileStarted);
     }
 
     @Override
     public void compileError(CompileEvent ce) {
-        if (!ce.isUserGeneratedCompilation()) {
-            return;
-        }
-        try {
-            tracker.compileError(projectOf(ce), fileOf(ce), ce.getErrorLineNumber(),
-                    ce.getErrorMessage());
-        } catch (RuntimeException e) {
-            System.out.println("[Telemetry] compile error event failed: " + e);
-        }
+        forward(ce, "compile error", () -> tracker.compileError(projectOf(ce), fileOf(ce),
+                ce.getErrorLineNumber(), ce.getErrorMessage()));
     }
 
     @Override
@@ -42,25 +32,26 @@ public class BlueJCompileAdapter implements CompileListener {
 
     @Override
     public void compileSucceeded(CompileEvent ce) {
-        if (!ce.isUserGeneratedCompilation()) {
-            return;
-        }
-        try {
-            tracker.compileSucceeded(projectOf(ce), fileOf(ce));
-        } catch (RuntimeException e) {
-            System.out.println("[Telemetry] compile success event failed: " + e);
-        }
+        forward(ce, "compile success", () -> tracker.compileSucceeded(projectOf(ce), fileOf(ce)));
     }
 
     @Override
     public void compileFailed(CompileEvent ce) {
+        forward(ce, "compile failed", () -> tracker.compileFailed(projectOf(ce)));
+    }
+
+    /**
+     * Runs the action for user-triggered compiles only, and never lets an error
+     * reach BlueJ.
+     */
+    private void forward(CompileEvent ce, String label, Runnable action) {
         if (!ce.isUserGeneratedCompilation()) {
             return;
         }
         try {
-            tracker.compileFailed(projectOf(ce));
+            action.run();
         } catch (RuntimeException e) {
-            System.out.println("[Telemetry] compile failed event failed: " + e);
+            System.out.println("[Telemetry] " + label + " event failed: " + e);
         }
     }
 
@@ -78,9 +69,6 @@ public class BlueJCompileAdapter implements CompileListener {
 
     private String fileOf(CompileEvent ce) {
         File[] files = ce.getFiles();
-        if (files == null || files.length == 0) {
-            return null;
-        }
-        return files[0].getName();
+        return files == null || files.length == 0 ? null : files[0].getName();
     }
 }

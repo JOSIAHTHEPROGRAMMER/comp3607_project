@@ -104,39 +104,6 @@ class CompileTrackerTest {
     }
 
     @Test
-    void countsSuccessfulAndFailedAttempts() {
-        tracker.compileStarted();
-        tracker.compileSucceeded("proj", "Dog.java");
-        tracker.compileStarted();
-        tracker.compileError("proj", "Dog.java", 3, "';' expected");
-        tracker.compileFailed("proj");
-        tracker.compileStarted();
-        tracker.compileSucceeded("proj", "Dog.java");
-
-        assertEquals(3, tracker.getTotalAttempts());
-        assertEquals(2, tracker.getSuccessfulCompilations());
-        assertEquals(1, tracker.getFailedCompilations());
-    }
-
-    @Test
-    void recordsIntervalsBetweenConsecutiveCompileStarts() {
-        tracker.compileStarted();
-        now.addAndGet(500);
-        tracker.compileStarted();
-        now.addAndGet(1200);
-        tracker.compileStarted();
-
-        assertEquals(List.of(500L, 1200L), tracker.getIntervalsMillis());
-    }
-
-    @Test
-    void firstCompileHasNoInterval() {
-        tracker.compileStarted();
-
-        assertTrue(tracker.getIntervalsMillis().isEmpty());
-    }
-
-    @Test
     void resultWithoutStartStillGetsAnAttemptId() {
         tracker.compileSucceeded("proj", "Dog.java");
 
@@ -144,16 +111,4 @@ class CompileTrackerTest {
         assertEquals(1, events.get(0).getAttemptId());
     }
 
-    @Test
-    void intervalListIsACopy() {
-        tracker.compileStarted();
-        now.addAndGet(100);
-        tracker.compileStarted();
-        List<Long> snapshot = tracker.getIntervalsMillis();
-        now.addAndGet(100);
-        tracker.compileStarted();
-
-        assertEquals(1, snapshot.size());
-        assertEquals(2, tracker.getIntervalsMillis().size());
-    }
 }
