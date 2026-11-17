@@ -82,4 +82,17 @@ class CompileEventTest {
         assertTrue(s.contains("COMPILE_SUCCESS"));
         assertFalse(s.contains("code="));
     }
+
+    @Test
+    void factoriesBuildSuccessAndErrorEvents() {
+        CompileEvent ok = CompileEvent.success(1, 1000, "proj", "Dog.java");
+        assertTrue(ok.isSuccess());
+        assertEquals("Dog.java", ok.getFile());
+
+        CompileEvent bad = CompileEvent.error(2, 2000, "proj", "Dog.java", 19,
+                "expected", Category.SYNTAX, "';' expected");
+        assertFalse(bad.isSuccess());
+        assertEquals(19, bad.getLine());
+        assertEquals("expected", bad.getErrorCode());
+    }
 }

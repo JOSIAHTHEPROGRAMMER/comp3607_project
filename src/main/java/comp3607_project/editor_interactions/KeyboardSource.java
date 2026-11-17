@@ -8,7 +8,6 @@ import java.time.Instant;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-
 public final class KeyboardSource implements InteractionSource {
 
     private final InteractionMonitor monitor;
@@ -26,15 +25,13 @@ public final class KeyboardSource implements InteractionSource {
 
     @Override
     public void start() {
-        if (!started.compareAndSet(false, true)) return; // idempotent
+        if (!started.compareAndSet(false, true))
+            return; // idempotent
 
-        listener = new AWTEventListener() {
-            @Override
-            public void eventDispatched(AWTEvent event) {
-                if (event instanceof KeyEvent
-                        && event.getID() == KeyEvent.KEY_PRESSED) {
-                    handleKey((KeyEvent) event);
-                }
+        listener = (AWTEvent event) -> {
+            if (event instanceof KeyEvent
+                    && event.getID() == KeyEvent.KEY_PRESSED) {
+                handleKey((KeyEvent) event);
             }
         };
         Toolkit.getDefaultToolkit().addAWTEventListener(listener, AWTEvent.KEY_EVENT_MASK);
