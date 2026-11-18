@@ -77,11 +77,11 @@ public class PdfBoxWriter implements PdfWriter {
 
             cs.beginText(); cs.setFont(font, 11);
             cs.newLineAtOffset(MARGIN + 8, rowY - rowH + 11);
-            cs.showText(rows[r][0]); cs.endText();
+            cs.showText(encodeText(rows[r][0], font)); cs.endText();
 
             cs.beginText(); cs.setFont(font, 11);
             cs.newLineAtOffset(MARGIN + col1 + 8, rowY - rowH + 11);
-            cs.showText(rows[r][1]); cs.endText();
+            cs.showText(encodeText(rows[r][1], font)); cs.endText();
 
             cs.setNonStrokingColor(Color.BLACK);
         }
@@ -92,8 +92,25 @@ public class PdfBoxWriter implements PdfWriter {
         cs.beginText();
         cs.setFont(font, size);
         cs.newLineAtOffset(MARGIN, currentY - LINE);
-        cs.showText(text);
+        cs.showText(encodeText(text, font));
         cs.endText();
         currentY -= LINE;
+    }
+
+    private String encodeText(String text, PDFont font) throws IOException {
+        StringBuilder encoded = new StringBuilder(text.length());
+        for (int offset = 0; offset < text.length();) {
+            int codePoint = text.codePointAt(offset);
+            offset += Character.charCount(codePoint);
+            String character = Character.isISOControl(codePoint)
+                    ? " " : new String(Character.toChars(codePoint));
+            try {
+                font.encode(character);
+                encoded.append(character);
+            } catch (IllegalArgumentException e) {
+                encoded.append('?');
+            }
+        }
+        return encoded.toString();
     }
 }
