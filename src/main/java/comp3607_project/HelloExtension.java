@@ -57,13 +57,15 @@ public class HelloExtension extends Extension {
 
         editor = new EditorTelemetry(sink, () -> dirTracker.getLastKnownDir()
                 .map(p -> p.getFileName() == null ? null : p.getFileName().toString())
-                .orElse(null));
+                .orElse(null), reportFacade.interactionObserver());
+
         editor.start();
 
         bluej.addPackageListener(new BlueJProjectDirAdapter(dirTracker,
                 editor::projectOpened,
                 dir -> {
                     exportSession(dir);
+                    exportPdf(dir);
                     editor.projectClosed(dir);
                 }));
         System.out.println("[Telemetry] extension started");
@@ -98,26 +100,37 @@ public class HelloExtension extends Extension {
         }
     }
 
-    @Override
-    public void terminate() {
+    private void exportPdf(Path dir) {
         if (reportFacade == null) {
             return;
         }
-
-        reportFacade.endSession(System.currentTimeMillis());
-        Path reportsDirectory = Path.of(System.getProperty("user.home"), "BlueJ", "telemetry-reports");
-        File report = reportsDirectory.resolve("session-" + sessionStartedAtMillis + ".pdf").toFile();
         try {
-            Files.createDirectories(reportsDirectory);
+            reportFacade.endSession(System.currentTimeMillis());
+            Path targetDir = dir != null ? dir
+                    : dirTracker.getLastKnownDir().orElse(
+                            Path.of(System.getProperty("user.home"), "BlueJ", "telemetry-reports"));
+            Files.createDirectories(targetDir);
+            File report = targetDir.resolve("session-" + sessionStartedAtMillis + ".pdf").toFile();
             reportFacade.export(report);
             System.out.println("[Telemetry] session report written to " + report.getAbsolutePath());
-        } catch (IOException e) {
-            System.err.println("[Telemetry] could not export session report: " + e.getMessage());
+        } catch (IOException | RuntimeException t) {
+            System.out.println("[Telemetry] PDF export failed: " + t);
+            try {
+                Files.writeString(Path.of(System.getProperty("user.home"), "telemetry-pdf-error.txt"),
+                        t + System.lineSeparator(), java.nio.file.StandardOpenOption.CREATE,
+                        java.nio.file.StandardOpenOption.APPEND);
+            } catch (IOException ignored) {
+            }
         }
+    }
+
+    @Override
+    public void terminate() {
         if (editor != null) {
             editor.close();
         }
         exportSession(null);
+        exportPdf(null);
         System.out.println("[Telemetry] extension terminated");
     }
 

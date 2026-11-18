@@ -1,14 +1,11 @@
 package comp3607_project.pdf_exporter.journal;
 
-
-import comp3607_project.model.TelemetryEvent;
-
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import comp3607_project.model.TelemetryEvent;
 
 public final class TelemetryJournal {
 
@@ -28,10 +25,13 @@ public final class TelemetryJournal {
         this.endedAtMillis = endedAtMillis;
     }
 
-    public synchronized long startedAtMillis() { return startedAtMillis; }
+    public synchronized long startedAtMillis() {
+        return startedAtMillis;
+    }
 
     public synchronized long endedAtMillis() {
-        if (endedAtMillis >= 0) return endedAtMillis;
+        if (endedAtMillis >= 0)
+            return endedAtMillis;
         return events.stream().mapToLong(TelemetryEvent::getTimestamp)
                 .max().orElse(startedAtMillis);
     }
