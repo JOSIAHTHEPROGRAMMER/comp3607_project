@@ -116,6 +116,19 @@ class TelemetryReportFacadeTest {
     }
 
     @Test
+    void exportCreatesMissingParentDirectories(@TempDir Path dir) throws IOException {
+        TelemetryReportFacade facade = new TelemetryReportFacade(0L);
+        facade.endSession(10_000L);
+        File target = dir.resolve("missing").resolve("nested").resolve("report.pdf").toFile();
+
+        File written = facade.export(target);
+
+        assertSame(target, written);
+        assertTrue(target.isFile());
+        assertTrue(target.length() > 0);
+    }
+
+    @Test
     void reportShowsTheSessionNumbers(@TempDir Path dir) throws IOException {
         TelemetryReportFacade facade = new TelemetryReportFacade(0L);
         recordTypicalSession(facade.sinkForTrackers());

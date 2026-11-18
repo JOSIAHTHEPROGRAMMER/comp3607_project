@@ -34,7 +34,6 @@ public class TelemetryReportFacade {
     private final ReportEventSink eventSink;
     private final ReportInteractionObserver interactionObserver;
     private final DefaultMetricsAggregator aggregator;
-    private final ZoneId zone;
 
     public TelemetryReportFacade(long startedAtMillis) {
         this(startedAtMillis, null);
@@ -42,26 +41,26 @@ public class TelemetryReportFacade {
 
     public TelemetryReportFacade(long startedAtMillis, EventSink delegate) {
         this(startedAtMillis,
-             new InteractionIdleTimeCalculator(DEFAULT_IDLE_THRESHOLD_MS),
-             new FixedBucketHistogramBuilder(),
-             ZoneId.systemDefault(),
-             delegate);
+                new InteractionIdleTimeCalculator(DEFAULT_IDLE_THRESHOLD_MS),
+                new FixedBucketHistogramBuilder(),
+                ZoneId.systemDefault(),
+                delegate);
     }
 
     public TelemetryReportFacade(long startedAtMillis,
-                                 IdleTimeCalculator idleCalculator,
-                                 ErrorIntervalHistogramBuilder histogramBuilder,
-                                 ZoneId zone) {
+            IdleTimeCalculator idleCalculator,
+            ErrorIntervalHistogramBuilder histogramBuilder,
+            ZoneId zone) {
         this(startedAtMillis, idleCalculator, histogramBuilder, zone, null);
     }
 
     public TelemetryReportFacade(long startedAtMillis,
-                                 IdleTimeCalculator idleCalculator,
-                                 ErrorIntervalHistogramBuilder histogramBuilder,
-                                 ZoneId zone,
-                                 EventSink delegate) {
-        this.zone = zone;
-        this.telemetryJournal   = new TelemetryJournal(startedAtMillis);
+            IdleTimeCalculator idleCalculator,
+            ErrorIntervalHistogramBuilder histogramBuilder,
+            ZoneId zone,
+            EventSink delegate) {
+
+        this.telemetryJournal = new TelemetryJournal(startedAtMillis);
         this.interactionJournal = new InteractionJournal();
         this.eventSink          = new ReportEventSink(delegate, telemetryJournal, interactionJournal);
         this.interactionObserver = new ReportInteractionObserver(interactionJournal);

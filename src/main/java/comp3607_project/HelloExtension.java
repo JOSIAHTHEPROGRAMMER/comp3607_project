@@ -1,5 +1,16 @@
 package comp3607_project;
 
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.time.Instant;
+
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
+
 import bluej.extensions2.BlueJ;
 import bluej.extensions2.Extension;
 import bluej.extensions2.event.ClassListener;
@@ -21,15 +32,6 @@ import comp3607_project.lifecycle.LifecycleTracker;
 import comp3607_project.model.CompositeSink;
 import comp3607_project.model.ConsoleSink;
 import comp3607_project.pdf_exporter.TelemetryReportFacade;
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.time.Instant;
-import org.apache.pdfbox.pdmodel.font.PDType1Font;
 
 public class HelloExtension extends Extension {
     private static final String STUDENT_ID = "STUDENT_ID_PLACEHOLDER";
