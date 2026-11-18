@@ -8,13 +8,22 @@ A BlueJ extension that records what a student does while working in BlueJ (proje
 
 - JDK 21
 - Maven 3.6.3 or newer
-- An internet connection for the first build (Maven downloads the dependencies, including the BlueJ extensions API, from Maven Central)
+- BlueJ 6.0.1 (the extension API jar is not published to Maven Central)
+- An internet connection for the first build (Maven downloads the other dependencies from Maven Central)
 
 Check what you have installed:
 
 bash
 java -version
 mvn -v
+
+Before the first build, install the BlueJ extension API jar from the BlueJ 6.0.1 installation (`lib/bluej.jar`) into your local Maven repository:
+
+bash
+
+mvn org.apache.maven.plugins:maven-install-plugin:3.1.3:install-file \
+  -Dfile="/path/to/BlueJ/lib/bluej.jar" \
+  -DgroupId=org.bluej -DartifactId=bluej -Dversion=6.0.1 -Dpackaging=jar
 
 ## Running the tests
 

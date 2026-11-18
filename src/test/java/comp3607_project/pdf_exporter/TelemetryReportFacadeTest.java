@@ -1,9 +1,26 @@
 package comp3607_project.pdf_exporter;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
+import org.apache.pdfbox.text.PDFTextStripper;
+import org.apache.pdfbox.text.TextPosition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import comp3607_project.compile.CompileErrorClassifier.Category;
 import comp3607_project.compile.CompileEvent;
@@ -16,20 +33,6 @@ import comp3607_project.lifecycle.LifecycleEvent;
 import comp3607_project.lifecycle.LifecycleEventType;
 import comp3607_project.model.EventSink;
 import comp3607_project.model.TelemetryEvent;
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.text.PDFTextStripper;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 /**
  * End-to-end check of the report: events go in through the sink, a real PDF file comes
@@ -57,6 +60,42 @@ class TelemetryReportFacadeTest {
     private static int pagesOf(File pdf) throws IOException {
         try (PDDocument doc = PDDocument.load(pdf)) {
             return doc.getNumberOfPages();
+        }
+    }
+
+    private static long imagesOnPage(File pdf, int pageIndex) throws IOException {
+        try (PDDocument doc = PDDocument.load(pdf)) {
+            var resources = doc.getPage(pageIndex).getResources();
+            long imageCount = 0;
+            for (var name : resources.getXObjectNames()) {
+                if (resources.getXObject(name) instanceof PDImageXObject) {
+                    imageCount++;
+                }
+            }
+            return imageCount;
+        }
+    }
+
+    private static float yOfText(File pdf, String text) throws IOException {
+        try (PDDocument doc = PDDocument.load(pdf)) {
+            class PositionStripper extends PDFTextStripper {
+                private float y = Float.NaN;
+
+                PositionStripper() throws IOException {}
+
+                @Override
+                protected void writeString(String line, List<TextPosition> positions)
+                        throws IOException {
+                    if (line.contains(text) && !positions.isEmpty()) {
+                        y = positions.get(0).getYDirAdj();
+                    }
+                    super.writeString(line, positions);
+                }
+            }
+
+            PositionStripper stripper = new PositionStripper();
+            stripper.getText(doc);
+            return stripper.y;
         }
     }
 
@@ -105,6 +144,21 @@ class TelemetryReportFacadeTest {
         assertTrue(text.contains("50.0%"));
         assertTrue(text.contains("2. Compilation Error Analysis"));
         assertTrue(text.contains("3. Compilation Progression & Quality"));
+    }
+
+    @Test
+    void reportIncludesRequestedChartsAndQualityTable(@TempDir Path dir) throws IOException {
+        TelemetryReportFacade facade = new TelemetryReportFacade(0L);
+        recordTypicalSession(facade.sinkForTrackers());
+        facade.endSession(10_000L);
+        File pdf = facade.export(dir.resolve("report.pdf").toFile());
+
+        assertEquals(2, imagesOnPage(pdf, 1));
+        assertEquals(1, imagesOnPage(pdf, 2));
+        String text = textOf(pdf);
+        assertTrue(text.contains("Compile Success Rate"));
+        assertTrue(text.contains("Compile-to-Run Ratio"));
+        assertTrue(yOfText(pdf, "Metric") - yOfText(pdf, "Compile Quality Metrics") >= 20f);
     }
 
     @Test
@@ -165,6 +219,20 @@ class TelemetryReportFacadeTest {
         // the key press at 30s widens the 10s session to 30s, so 25s of it is idle
         assertTrue(textOf(pdf).contains("25s (83.3%)"));
     }
+
+    /*@Test
+    void interactionTelemetryThroughTheTrackerSinkIsAnalyzed(@TempDir Path dir) throws IOException {
+        TelemetryReportFacade facade = new TelemetryReportFacade(0L);
+        InteractionEvent event = new InteractionEvent(
+                InteractionEvent.Kind.KEY, Instant.ofEpochMilli(30_000), 0, "A", false);
+        facade.sinkForTrackers().accept(new InteractionTelemetryEvent(event, "proj"));
+        facade.endSession(10_000L);
+
+        File pdf = facade.export(dir.resolve("nested/report.pdf").toFile());
+
+        assertTrue(pdf.isFile());
+        assertTrue(textOf(pdf).contains("25s (83.3%)"));
+    }*/
 
     @Test
     void customIdleCalculatorAndHistogramBuilderAreUsed(@TempDir Path dir) throws IOException {

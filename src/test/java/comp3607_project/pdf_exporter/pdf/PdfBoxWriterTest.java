@@ -8,6 +8,7 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.junit.jupiter.api.Test;
 
 /** Checks how each drawing call moves the writer's cursor down the page. */
@@ -85,6 +86,20 @@ class PdfBoxWriterTest {
             }
 
             assertEquals(writer.contentTop() - (3 * 22f + 10f), writer.cursor(), DELTA);
+        }
+    }
+
+    @Test
+    void unsupportedUnicodeDoesNotPreventPdfTextGeneration() throws IOException {
+        try (PDDocument doc = new PDDocument()) {
+            PDPage page = new PDPage(PDRectangle.A4);
+            doc.addPage(page);
+            writer.beginPage();
+            try (PDPageContentStream cs = new PDPageContentStream(doc, page)) {
+                writer.paragraph(cs, "Telemetry 😀 value", 11);
+            }
+
+            assertEquals("Telemetry ? value", new PDFTextStripper().getText(doc).trim());
         }
     }
 }

@@ -1,14 +1,13 @@
 package comp3607_project.pdf_exporter;
 
+
 import java.io.File;
 import java.io.IOException;
 import java.time.ZoneId;
-import java.util.List;
-
-import org.apache.pdfbox.pdmodel.PDDocument;
 
 import comp3607_project.model.EventSink;
 import comp3607_project.pdf_exporter.charts.BarChartRenderer;
+import comp3607_project.pdf_exporter.charts.ChartRenderer;
 import comp3607_project.pdf_exporter.charts.LineChartRenderer;
 import comp3607_project.pdf_exporter.charts.PieChartRenderer;
 import comp3607_project.pdf_exporter.format.HumanReadableDurationFormatter;
@@ -23,11 +22,8 @@ import comp3607_project.pdf_exporter.metrics.IdleTimeCalculator;
 import comp3607_project.pdf_exporter.metrics.InteractionIdleTimeCalculator;
 import comp3607_project.pdf_exporter.metrics.ReportMetrics;
 import comp3607_project.pdf_exporter.pdf.PdfBoxWriter;
-import comp3607_project.pdf_exporter.pdf.PdfReportGenerator;
-import comp3607_project.pdf_exporter.pdf.PdfWriter;
+import comp3607_project.pdf_exporter.pdf.ReportBuilder;
 import comp3607_project.pdf_exporter.pdf.ReportMetricsView;
-import comp3607_project.pdf_exporter.pdf.ReportSection;
-import comp3607_project.pdf_exporter.pdf.ReportSectionFactory;
 
 public class TelemetryReportFacade {
 
@@ -66,7 +62,7 @@ public class TelemetryReportFacade {
 
         this.telemetryJournal = new TelemetryJournal(startedAtMillis);
         this.interactionJournal = new InteractionJournal();
-        this.eventSink = new ReportEventSink(delegate, telemetryJournal);
+        this.eventSink          = new ReportEventSink(delegate, telemetryJournal, interactionJournal);
         this.interactionObserver = new ReportInteractionObserver(interactionJournal);
         this.aggregator = new DefaultMetricsAggregator(idleCalculator, histogramBuilder, zone);
     }
@@ -85,31 +81,74 @@ public class TelemetryReportFacade {
 
     public File export(File output) throws IOException {
         ReportMetrics metrics = aggregator.aggregate(telemetryJournal, interactionJournal);
+        ReportMetricsView view = ReportMetricsView.of(metrics);
 
-        List<ReportSection> sections = ReportSectionFactory.create(
-                new HumanReadableDurationFormatter(),
-                new PieChartRenderer(
-                        "Compilation Errors by Category",
-                        metrics.errorFrequencyByCategory(), 700, 400),
-                new BarChartRenderer(
-                        "Time Between Compilation Errors", "Interval", "Errors",
-                        metrics.errorIntervalBuckets(), 700, 400),
-                new LineChartRenderer(
-                        "Cumulative Compilation Outcomes", "Attempt", "Count",
-                        metrics.compilationOutcomes(), 700, 400));
+        ChartRenderer pie = new PieChartRenderer(
+                "Compilation Errors by Category",
+                metrics.errorFrequencyByCategory(), 700, 400);
+        ChartRenderer histogram = new BarChartRenderer(
+                "Time Between Compilation Errors", "Interval", "Errors",
+                metrics.errorIntervalBuckets(), 700, 400);
+        ChartRenderer line = new LineChartRenderer(
+                "Cumulative Compilation Outcomes", "Attempt", "Count",
+                metrics.compilationOutcomes(), 700, 400);
 
-        PdfWriter writer = new PdfBoxWriter();
-        PdfReportGenerator generator = new PdfReportGenerator(sections, writer);
+        String[][] qualityRows = {
+                {"Metric",               "Value"},
+                {"Total Compilations",   String.valueOf(metrics.totalCompilations())},
+                {"Successful",           String.valueOf(metrics.successfulCompilations())},
+                {"Failed",               String.valueOf(metrics.failedCompilations())},
+                {"Compile Success Rate", String.format("%.1f%%", metrics.compileSuccessRate())},
+                {"Total Program Runs",   String.valueOf(metrics.totalRuns())},
+                {"Compile-to-Run Ratio", String.format("%.2f", metrics.compileToRunRatio())}
+        };
 
-        File parent = output.getAbsoluteFile().getParentFile();
-        if (parent != null && !parent.exists() && !parent.mkdirs()) {
-            throw new IOException("Could not create PDF report directory: " + parent);
+        ReportBuilder builder = new ReportBuilder(new PdfBoxWriter(), view,
+                new HumanReadableDurationFormatter());
+
+        // ---------- Page 1: summary --------------------------------------------
+        builder.title("BlueJ Session Telemetry Report")
+               .paragraph("1. Active Coding Time vs. Idle Time")
+               .activeIdleBar()
+               .paragraph("")
+               .paragraph("Session KPIs")
+               .paragraph("Total compilations:       " + metrics.totalCompilations(), 11)
+               .paragraph("Successful compilations:  " + metrics.successfulCompilations(), 11)
+               .paragraph("Failed compilations:      " + metrics.failedCompilations(), 11)
+               .paragraph("Total program runs:       " + metrics.totalRuns(), 11)
+               .paragraph(String.format("Compile success rate:     %.1f%%", metrics.compileSuccessRate()), 11)
+               .paragraph(String.format("Compile-to-run ratio:     %.2f", metrics.compileToRunRatio()), 11)
+
+        // ---------- Page 2: charts ---------------------------------------------
+               .page()
+               .title("2. Compilation Error Analysis")
+               .chart(pie)
+               .chart(histogram)
+
+        // ---------- Page 3: quality table --------------------------------------
+               .page()
+               .title("3. Compilation Progression & Quality")
+               .chart(line)
+               .paragraph("Compile Quality Metrics")
+               .paragraph("")
+               .table(qualityRows);
+
+        // ---------- Page 4: timeline (skipped when empty) ----------------------
+        if (!metrics.timelineEntries().isEmpty()) {
+            builder.page().title("4. Progression Timeline")
+                   .paragraph("Class creations, modifications, and renames:", 11);
+
+            int shown = 0;
+            for (String entry : metrics.timelineEntries()) {
+                if (shown++ >= 30) break;
+                builder.paragraph("• " + entry, 10);
+            }
+            if (metrics.timelineEntries().size() > 30) {
+                builder.paragraph("... and "
+                        + (metrics.timelineEntries().size() - 30) + " more entries.", 10);
+            }
         }
 
-        try (PDDocument doc = new PDDocument()) {
-            generator.writeTo(doc, ReportMetricsView.of(metrics));
-            doc.save(output.getAbsoluteFile());
-        }
-        return output;
+        return builder.build(output);   
     }
 }
