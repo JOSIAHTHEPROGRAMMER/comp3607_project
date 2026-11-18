@@ -1,12 +1,11 @@
 package comp3607_project.pdf_exporter.pdf;
 
-
-import comp3607_project.pdf_exporter.format.DurationFormatter;
+import java.io.IOException;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 
-import java.io.IOException;
+import comp3607_project.pdf_exporter.format.DurationFormatter;
 
 public class SummarySection extends AbstractReportSection {
 
@@ -16,7 +15,10 @@ public class SummarySection extends AbstractReportSection {
         this.formatter = formatter;
     }
 
-    @Override public int order() { return 10; }
+    @Override
+    public int order() {
+        return 10;
+    }
 
     @Override
     public void render(PDDocument doc, PdfWriter w, ReportMetricsView v) throws IOException {
@@ -27,7 +29,7 @@ public class SummarySection extends AbstractReportSection {
 
             long total = Math.max(1, v.activeTimeMillis() + v.idleTimeMillis());
             float activePct = (float) v.activeTimeMillis() * 100f / total;
-            float idlePct   = 100f - activePct;
+            float idlePct = 100f - activePct;
 
             float barWidth = 400f, barHeight = 18f;
             float barY = w.cursor() - barHeight;
@@ -38,9 +40,9 @@ public class SummarySection extends AbstractReportSection {
 
             cs.setNonStrokingColor(0.85f, 0.30f, 0.30f);
             cs.addRect(w.margin() + barWidth * activePct / 100f, barY,
-                       barWidth * idlePct / 100f, barHeight);
+                    barWidth * idlePct / 100f, barHeight);
             cs.fill();
-            cs.setNonStrokingColor(0, 0, 0);
+            cs.setNonStrokingColor(0f, 0f, 0f);
             w.advance(barHeight + 16);
 
             w.paragraph(cs, String.format("Active coding: %s (%.1f%%)",

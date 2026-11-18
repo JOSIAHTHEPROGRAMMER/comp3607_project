@@ -13,6 +13,7 @@ import comp3607_project.model.EventSink;
  */
 public final class EditorTelemetry {
     private static final long IDLE_THRESHOLD_MS = 5_000;
+    private final InteractionObserver extra;
 
     private final EventSink sink;
     private final Supplier<String> currentProject;
@@ -20,8 +21,14 @@ public final class EditorTelemetry {
     private KeyboardSource keyboard;
 
     public EditorTelemetry(EventSink sink, Supplier<String> currentProject) {
+        this(sink, currentProject, null);
+    }
+
+    public EditorTelemetry(EventSink sink, Supplier<String> currentProject,
+            InteractionObserver extra) {
         this.sink = sink;
         this.currentProject = currentProject;
+        this.extra = extra;
     }
 
     public synchronized void start() {
@@ -31,6 +38,10 @@ public final class EditorTelemetry {
         InteractionMonitor monitor = new InteractionMonitor();
         monitor.addObserver(new TelemetryInteractionObserver(sink, currentProject,
                 TelemetryInteractionObserver::editsAndIdleOnly));
+
+        if (extra != null)
+            monitor.addObserver(extra);
+
         keyboard = new KeyboardSource(monitor, new ThresholdIdleClassifier(IDLE_THRESHOLD_MS));
         keyboard.start();
     }
@@ -44,6 +55,10 @@ public final class EditorTelemetry {
         String project = name == null ? null : name.toString();
         InteractionMonitor monitor = new InteractionMonitor();
         monitor.addObserver(new TelemetryInteractionObserver(sink, () -> project));
+
+        if (extra != null)
+            monitor.addObserver(extra);
+
         FileWatchSource watcher = new FileWatchSource(dir, monitor);
         watcher.start();
         watchers.put(dir, watcher);
